@@ -1,5 +1,3 @@
-"""Веб-приложение Flask для демонстрации сети Фейстеля."""
-
 from __future__ import annotations
 
 import io
@@ -43,6 +41,55 @@ from rsa_utils import (
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
+
+
+def _log_to_lines(log: str) -> list[str]:
+    """Преобразует многострочный журнал в список непустых строк."""
+
+    return [line.strip() for line in log.splitlines() if line.strip()]
+
+
+def _normalize_section(lines: list[str]) -> dict[str, list[str]]:
+    """Формирует словарь с заголовком и списком строк для группы журнала."""
+
+    clean = [line.strip() for line in lines if line.strip()]
+    if not clean:
+        return {"title": "", "lines": []}
+
+    if set(clean[0]) == {"="}:
+        title = ""
+        body = []
+        for line in clean:
+            if set(line) == {"="}:
+                continue
+            if not title:
+                title = line
+            else:
+                body.append(line)
+        return {"title": title, "lines": body}
+
+    title, *body = clean
+    return {"title": title, "lines": body}
+
+
+def _log_to_sections(log: str) -> list[dict[str, list[str]]]:
+    """Разбивает журнал на логические группы по пустым строкам."""
+
+    sections = []
+    buffer = []
+
+    for line in log.splitlines():
+        if line.strip():
+            buffer.append(line)
+            continue
+        if buffer:
+            sections.append(_normalize_section(buffer))
+            buffer = []
+
+    if buffer:
+        sections.append(_normalize_section(buffer))
+
+    return [section for section in sections if section["title"] or section["lines"]]
 
 
 def _render_index(**context):
@@ -248,6 +295,9 @@ def _handle_encrypt() -> Response:
             "preparation_log": preparation_log,
             "encryption_log": encryption_log,
             "rsa_log": rsa_log,
+            "preparation_steps": _log_to_lines(preparation_log),
+            "encryption_sections": _log_to_sections(encryption_log),
+            "rsa_steps": _log_to_lines(rsa_log),
         }
     }
 
@@ -311,9 +361,13 @@ def _handle_decrypt() -> Response:
             "plaintext": plaintext,
             "symmetric_key_binary": symmetric_key_binary,
             "cipher_blocks": format_blocks(package["cipher_blocks"]),
+            "cipher_blocks_list": package["cipher_blocks"],
             "decryption_log": decryption_log,
             "restoration_log": restoration_log,
             "rsa_log": rsa_log,
+            "decryption_sections": _log_to_sections(decryption_log),
+            "restoration_steps": _log_to_lines(restoration_log),
+            "rsa_steps": _log_to_lines(rsa_log),
         }
     }
 
