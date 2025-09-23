@@ -1,5 +1,3 @@
-"""Веб-приложение Flask для демонстрации сети Фейстеля."""
-
 from __future__ import annotations
 
 import io
