@@ -5,7 +5,8 @@ from __future__ import annotations
 import io
 import json
 import secrets
-from typing import Dict
+
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey, RSAPublicKey
 
 from flask import (
     Flask,
@@ -20,21 +21,23 @@ from flask import (
 
 from data_io import create_package, package_from_bytes
 from feistel import (
-    ALPHABET,
-    PADDING_SYMBOL,
+    ENCODING,
+    PADDING_BYTE,
+    decrypt_blocks_with_trace,
+    encrypt_blocks_with_trace,
     format_blocks,
-    prepare_plaintext,
-    restore_plaintext,
-    encrypt_blocks,
-    decrypt_blocks,
+    prepare_plaintext_with_trace,
+    restore_plaintext_with_trace,
 )
 from rsa_utils import (
     decrypt as rsa_decrypt,
-    deserialize_key,
-    generate_key_pair,
-    serialize_key,
-    serialize_key_pair,
     encrypt as rsa_encrypt,
+    generate_key_pair,
+    get_modulus,
+    load_private_key,
+    load_public_key,
+    serialize_private_key,
+    serialize_public_key,
 )
 
 
@@ -64,8 +67,10 @@ def index() -> Response:
     try:
         if action == "generate_keys":
             return _handle_generate_keys()
-        if action == "download_keypair":
-            return _handle_download_keypair()
+        if action == "download_public_key":
+            return _handle_download_public_key()
+        if action == "download_private_key":
+            return _handle_download_private_key()
         if action == "encrypt":
             return _handle_encrypt()
         if action == "download_package":
@@ -88,48 +93,105 @@ def _handle_generate_keys() -> Response:
     key_pair = generate_key_pair()
     context = {
         "generated_keys": {
-            "public": serialize_key(key_pair.public_key),
-            "private": serialize_key(key_pair.private_key),
-            "pair": serialize_key_pair(key_pair),
+            "public": serialize_public_key(key_pair.public_key),
+            "private": serialize_private_key(key_pair.private_key),
+            "modulus": str(get_modulus(key_pair.public_key)),
         }
     }
     flash("Пара RSA-ключей успешно сгенерирована.", "success")
     return _render_index(**context)
 
 
-def _handle_download_keypair() -> Response:
-    """Возвращает файл с сохранённой парой ключей."""
+def _handle_download_public_key() -> Response:
+    """Скачивание файла с открытым ключом."""
 
-    keypair_json = request.form.get("keypair_json")
-    if not keypair_json:
-        raise ValueError("Нет данных для выгрузки пары ключей.")
+    public_pem = request.form.get("public_key_pem")
+    if not public_pem:
+        raise ValueError("Нет данных открытого ключа для скачивания.")
 
-    buffer = io.BytesIO(keypair_json.encode("utf-8"))
+    buffer = io.BytesIO(public_pem.encode("utf-8"))
     buffer.seek(0)
     return send_file(
         buffer,
-        mimetype="application/json",
+        mimetype="application/x-pem-file",
         as_attachment=True,
-        download_name="rsa_keypair.json",
+        download_name="rsa_public_key.pem",
     )
 
 
-def _extract_public_key() -> Dict[str, int]:
+def _handle_download_private_key() -> Response:
+    """Скачивание файла с закрытым ключом."""
+
+    private_pem = request.form.get("private_key_pem")
+    if not private_pem:
+        raise ValueError("Нет данных закрытого ключа для скачивания.")
+
+    buffer = io.BytesIO(private_pem.encode("utf-8"))
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype="application/x-pem-file",
+        as_attachment=True,
+        download_name="rsa_private_key.pem",
+    )
+
+
+def _extract_public_key() -> RSAPublicKey:
     """Извлекает открытый ключ из формы (файл или текстовое поле)."""
 
     if "public_key_file" in request.files:
         uploaded_file = request.files.get("public_key_file")
         if uploaded_file and uploaded_file.filename:
             data = uploaded_file.read().decode("utf-8")
-            return deserialize_key(data)
+            return load_public_key(data)
 
     public_key_text = request.form.get("public_key_text", "").strip()
     if public_key_text:
-        return deserialize_key(public_key_text)
+        return load_public_key(public_key_text)
 
     raise ValueError(
         "Необходимо предоставить открытый ключ RSA (файл или текстовое поле)."
     )
+
+
+def _build_rsa_encryption_log(
+    *,
+    public_key: RSAPublicKey,
+    symmetric_key_binary: str,
+    symmetric_key_bytes: bytes,
+    encrypted_key: str,
+) -> str:
+    """Формирует журнал RSA-шифрования симметричного ключа."""
+
+    lines = [
+        "RSA-ШИФРОВАНИЕ СИММЕТРИЧНОГО КЛЮЧА",
+        f"Модуль n: {get_modulus(public_key)}",
+        f"Симметричный ключ (16 бит): {symmetric_key_binary}",
+        f"Симметричный ключ (hex): 0x{symmetric_key_bytes.hex().upper()}",
+        "Используется схема OAEP с SHA-256.",
+        f"Зашифрованный ключ (base64): {encrypted_key}",
+    ]
+    return "\n".join(lines)
+
+
+def _build_rsa_decryption_log(
+    *,
+    private_key: RSAPrivateKey,
+    encrypted_key: str,
+    symmetric_key_bytes: bytes,
+    symmetric_key_binary: str,
+) -> str:
+    """Формирует журнал RSA-расшифрования симметричного ключа."""
+
+    lines = [
+        "RSA-РАСШИФРОВАНИЕ СИММЕТРИЧНОГО КЛЮЧА",
+        f"Модуль n: {get_modulus(private_key)}",
+        f"Входные данные (base64): {encrypted_key}",
+        "Используется схема OAEP с SHA-256.",
+        f"Результат в hex: 0x{symmetric_key_bytes.hex().upper()}",
+        f"Результат в двоичном виде: {symmetric_key_binary}",
+    ]
+    return "\n".join(lines)
 
 
 def _handle_encrypt() -> Response:
@@ -141,26 +203,36 @@ def _handle_encrypt() -> Response:
 
     public_key = _extract_public_key()
 
-    prepared = prepare_plaintext(plaintext)
+    prepared, preparation_log = prepare_plaintext_with_trace(plaintext)
     symmetric_key_int = secrets.randbits(16)
     symmetric_key_binary = format(symmetric_key_int, "016b")
+    symmetric_key_bytes = symmetric_key_int.to_bytes(2, "big")
 
-    cipher_blocks = encrypt_blocks(prepared.binary_blocks, symmetric_key_binary)
+    cipher_blocks, encryption_log = encrypt_blocks_with_trace(
+        prepared.binary_blocks, symmetric_key_binary
+    )
 
-    encrypted_key = rsa_encrypt(symmetric_key_int, public_key)
+    encrypted_key = rsa_encrypt(symmetric_key_bytes, public_key)
+    rsa_log = _build_rsa_encryption_log(
+        public_key=public_key,
+        symmetric_key_binary=symmetric_key_binary,
+        symmetric_key_bytes=symmetric_key_bytes,
+        encrypted_key=encrypted_key,
+    )
 
     metadata = {
-        "alphabet": ALPHABET,
-        "padding_symbol": PADDING_SYMBOL,
+        "encoding": ENCODING,
+        "padding_byte": f"0x{PADDING_BYTE:02X}",
         "feedback_mode": "XOR с предыдущим шифроблоком",
         "rounds": "8",
+        "rsa": "RSA-OAEP (SHA-256)",
     }
 
     package = create_package(
         cipher_blocks=cipher_blocks,
         encrypted_key=encrypted_key,
-        rsa_modulus=public_key["n"],
-        original_length=prepared.original_length,
+        rsa_modulus=get_modulus(public_key),
+        original_byte_length=prepared.original_byte_length,
         metadata=metadata,
     )
     package_json = json.dumps(package, ensure_ascii=False, indent=2)
@@ -172,7 +244,10 @@ def _handle_encrypt() -> Response:
             "package_json": package_json,
             "encrypted_key": str(encrypted_key),
             "symmetric_key_binary": symmetric_key_binary,
-            "original_length": prepared.original_length,
+            "original_byte_length": prepared.original_byte_length,
+            "preparation_log": preparation_log,
+            "encryption_log": encryption_log,
+            "rsa_log": rsa_log,
         }
     }
 
@@ -209,22 +284,36 @@ def _handle_decrypt() -> Response:
         raise ValueError("Необходимо выбрать файл закрытого ключа.")
 
     package = package_from_bytes(package_file.read())
-    private_key = deserialize_key(private_key_file.read().decode("utf-8"))
+    private_key = load_private_key(private_key_file.read().decode("utf-8"))
 
-    if package["rsa_modulus"] != private_key["n"]:
+    if package["rsa_modulus"] != get_modulus(private_key):
         raise ValueError("Модуль RSA в пакете не совпадает с модулем ключа.")
 
-    symmetric_key_int = rsa_decrypt(package["encrypted_key"], private_key)
+    symmetric_key_bytes = rsa_decrypt(package["encrypted_key"], private_key)
+    symmetric_key_int = int.from_bytes(symmetric_key_bytes, "big")
     symmetric_key_binary = format(symmetric_key_int, "016b")
 
-    plaintext_blocks = decrypt_blocks(package["cipher_blocks"], symmetric_key_binary)
-    plaintext = restore_plaintext(plaintext_blocks, package["original_length"])
+    plaintext_blocks, decryption_log = decrypt_blocks_with_trace(
+        package["cipher_blocks"], symmetric_key_binary
+    )
+    plaintext, restoration_log = restore_plaintext_with_trace(
+        plaintext_blocks, package["original_byte_length"]
+    )
+    rsa_log = _build_rsa_decryption_log(
+        private_key=private_key,
+        encrypted_key=package["encrypted_key"],
+        symmetric_key_bytes=symmetric_key_bytes,
+        symmetric_key_binary=symmetric_key_binary,
+    )
 
     context = {
         "decryption_result": {
             "plaintext": plaintext,
             "symmetric_key_binary": symmetric_key_binary,
             "cipher_blocks": format_blocks(package["cipher_blocks"]),
+            "decryption_log": decryption_log,
+            "restoration_log": restoration_log,
+            "rsa_log": rsa_log,
         }
     }
 
