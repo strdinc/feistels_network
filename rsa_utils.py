@@ -1,161 +1,105 @@
-"""Утилиты для работы с простейшей RSA-криптосистемой.
+"""Утилиты для работы с полноценной RSA-криптосистемой.
 
-Модуль содержит функции генерации ключей, шифрования и расшифрования
-коротких сообщений (в нашем случае — 16-битных симметричных ключей).
+Модуль использует библиотеку :mod:`cryptography` для генерации ключей RSA
+стандартного размера (по умолчанию 2048 бит), сериализации ключей в формате
+PEM и шифрования/расшифрования симметричного 16-битного ключа с помощью OAEP.
 """
 
 from __future__ import annotations
 
-import json
-import math
-import secrets
+from base64 import b64decode, b64encode
 from dataclasses import dataclass
-from typing import Dict
+from typing import Union
+
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric.rsa import (
+    RSAPrivateKey,
+    RSAPublicKey,
+)
 
 
 @dataclass
 class RSAKeyPair:
-    """Пара ключей RSA.
+    """Пара RSA-ключей в формате объектов ``cryptography``."""
 
-    Attributes:
-        public_key: Словарь с полями ``n`` и ``e``.
-        private_key: Словарь с полями ``n`` и ``d``.
-    """
-
-    public_key: Dict[str, int]
-    private_key: Dict[str, int]
+    public_key: RSAPublicKey
+    private_key: RSAPrivateKey
 
 
-def _is_prime(candidate: int) -> bool:
-    """Проверяет число на простоту методом перебора делителей."""
+def generate_key_pair(key_size: int = 2048) -> RSAKeyPair:
+    """Генерирует пару RSA-ключей стандартного размера."""
 
-    if candidate < 2:
-        return False
-    if candidate in (2, 3):
-        return True
-    if candidate % 2 == 0:
-        return False
-
-    limit = int(math.sqrt(candidate)) + 1
-    for divisor in range(3, limit, 2):
-        if candidate % divisor == 0:
-            return False
-    return True
-
-
-def _generate_prime(min_value: int = 2 ** 10, max_value: int = 2 ** 12) -> int:
-    """Генерирует простое число в заданном диапазоне."""
-
-    while True:
-        candidate = secrets.randbelow(max_value - min_value) + min_value
-        if _is_prime(candidate):
-            return candidate
-
-
-def _egcd(a: int, b: int):
-    """Расширенный алгоритм Евклида для поиска НОД."""
-
-    if a == 0:
-        return b, 0, 1
-    gcd_value, x1, y1 = _egcd(b % a, a)
-    x = y1 - (b // a) * x1
-    y = x1
-    return gcd_value, x, y
-
-
-def _mod_inverse(value: int, modulo: int) -> int:
-    """Вычисляет мультипликативную обратную величину по модулю."""
-
-    gcd_value, x, _ = _egcd(value, modulo)
-    if gcd_value != 1:
-        raise ValueError("Обратного элемента не существует.")
-    return x % modulo
-
-
-def generate_key_pair() -> RSAKeyPair:
-    """Генерирует пару ключей RSA.
-
-    Возвращаются сравнительно небольшие числа, достаточные для демонстрации
-    гибридной криптосистемы, поскольку шифруется только 16-битный ключ.
-    """
-
-    p = _generate_prime()
-    q = _generate_prime()
-    while q == p:
-        q = _generate_prime()
-
-    n = p * q
-    phi = (p - 1) * (q - 1)
-
-    # Выбираем экспоненту e, взаимно простую с phi.
-    e = 65537
-    if math.gcd(e, phi) != 1:
-        e = 3
-        while math.gcd(e, phi) != 1:
-            e += 2
-
-    d = _mod_inverse(e, phi)
-
-    public_key = {"n": n, "e": e}
-    private_key = {"n": n, "d": d}
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=key_size)
+    public_key = private_key.public_key()
     return RSAKeyPair(public_key=public_key, private_key=private_key)
 
 
-def encrypt(value: int, public_key: Dict[str, int]) -> int:
-    """Шифрует целое число с помощью открытого ключа RSA."""
+def serialize_public_key(key: RSAPublicKey) -> str:
+    """Возвращает PEM-представление открытого ключа."""
 
-    n = public_key["n"]
-    e = public_key["e"]
-    if value >= n:
-        raise ValueError(
-            "Значение превышает модуль RSA. Используйте ключ большей длины."
-        )
-    return pow(value, e, n)
+    pem = key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+    return pem.decode("utf-8")
 
 
-def decrypt(value: int, private_key: Dict[str, int]) -> int:
-    """Расшифровывает целое число с помощью закрытого ключа RSA."""
+def serialize_private_key(key: RSAPrivateKey) -> str:
+    """Возвращает PEM-представление закрытого ключа (без пароля)."""
 
-    n = private_key["n"]
-    d = private_key["d"]
-    return pow(value, d, n)
-
-
-def serialize_key(key: Dict[str, int]) -> str:
-    """Сериализует ключ в JSON-строку."""
-
-    return json.dumps(key, ensure_ascii=False, indent=2)
+    pem = key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    return pem.decode("utf-8")
 
 
-def serialize_key_pair(key_pair: RSAKeyPair) -> str:
-    """Возвращает JSON-представление пары ключей."""
+def load_public_key(pem_text: str) -> RSAPublicKey:
+    """Восстанавливает объект открытого ключа из PEM-строки."""
 
-    return json.dumps(
-        {
-            "public_key": key_pair.public_key,
-            "private_key": key_pair.private_key,
-        },
-        ensure_ascii=False,
-        indent=2,
+    return serialization.load_pem_public_key(pem_text.encode("utf-8"))
+
+
+def load_private_key(pem_text: str) -> RSAPrivateKey:
+    """Восстанавливает объект закрытого ключа из PEM-строки."""
+
+    return serialization.load_pem_private_key(pem_text.encode("utf-8"), password=None)
+
+
+def encrypt(data: bytes, public_key: RSAPublicKey) -> str:
+    """Шифрует данные с помощью RSA-OAEP и возвращает результат в base64."""
+
+    ciphertext = public_key.encrypt(
+        data,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
+    )
+    return b64encode(ciphertext).decode("ascii")
+
+
+def decrypt(token: str, private_key: RSAPrivateKey) -> bytes:
+    """Расшифровывает base64-представление данных RSA-OAEP."""
+
+    ciphertext = b64decode(token.encode("ascii"))
+    return private_key.decrypt(
+        ciphertext,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None,
+        ),
     )
 
 
-def deserialize_key(json_text: str) -> Dict[str, int]:
-    """Преобразует JSON-строку обратно в словарь с ключом."""
+def get_modulus(key: Union[RSAPublicKey, RSAPrivateKey]) -> int:
+    """Возвращает модуль ``n`` из открытого или закрытого ключа."""
 
-    data = json.loads(json_text)
-    if not {"n"}.issubset(data.keys()):
-        raise ValueError("Некорректный формат ключа: отсутствует модуль n.")
-    return {key: int(value) for key, value in data.items()}
-
-
-def deserialize_key_pair(json_text: str) -> RSAKeyPair:
-    """Преобразует JSON-представление пары ключей в структуру RSAKeyPair."""
-
-    data = json.loads(json_text)
-    if "public_key" not in data or "private_key" not in data:
-        raise ValueError("JSON должен содержать поля public_key и private_key.")
-    public_key = deserialize_key(json.dumps(data["public_key"]))
-    private_key = deserialize_key(json.dumps(data["private_key"]))
-    return RSAKeyPair(public_key=public_key, private_key=private_key)
+    if isinstance(key, RSAPrivateKey):
+        return key.private_numbers().public_numbers.n
+    return key.public_numbers().n
 

@@ -12,9 +12,9 @@ PACKAGE_VERSION = 1
 
 def create_package(
     cipher_blocks: List[str],
-    encrypted_key: int,
+    encrypted_key: str,
     rsa_modulus: int,
-    original_length: int,
+    original_byte_length: int,
     metadata: Dict[str, str],
 ) -> Dict[str, object]:
     """Формирует словарь с данными для экспорта."""
@@ -22,9 +22,9 @@ def create_package(
     package = {
         "version": PACKAGE_VERSION,
         "cipher_blocks": cipher_blocks,
-        "encrypted_key": str(encrypted_key),
+        "encrypted_key": encrypted_key,
         "rsa_modulus": str(rsa_modulus),
-        "original_length": original_length,
+        "original_byte_length": original_byte_length,
         "metadata": metadata,
     }
     return package
@@ -45,15 +45,14 @@ def package_from_bytes(data: bytes) -> Dict[str, object]:
         "cipher_blocks",
         "encrypted_key",
         "rsa_modulus",
-        "original_length",
+        "original_byte_length",
         "metadata",
     }
     if not required_keys.issubset(package.keys()):
         raise ValueError("Файл не похож на пакет гибридной системы.")
     package["cipher_blocks"] = [str(block) for block in package["cipher_blocks"]]
-    package["encrypted_key"] = int(package["encrypted_key"])
     package["rsa_modulus"] = int(package["rsa_modulus"])
-    package["original_length"] = int(package["original_length"])
+    package["original_byte_length"] = int(package["original_byte_length"])
     return package
 
 

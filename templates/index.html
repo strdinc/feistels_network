@@ -29,8 +29,9 @@
       <section>
         <h2>1. Генерация пары RSA-ключей</h2>
         <p>
-          Нажмите кнопку ниже, чтобы получить новую пару ключей. Файл включает
-          открытый и закрытый ключи, поэтому храните его в безопасном месте.
+          Нажмите кнопку ниже, чтобы получить новую пару ключей. После
+          генерации можно сразу скачать открытый и закрытый ключи в формате
+          PEM.
         </p>
         <form method="post">
           <input type="hidden" name="action" value="generate_keys">
@@ -42,14 +43,22 @@
             <h3>Открытый ключ</h3>
             <textarea readonly rows="6">{{ generated_keys.public }}</textarea>
 
+            <form method="post">
+              <input type="hidden" name="action" value="download_public_key">
+              <textarea name="public_key_pem" class="hidden-field">{{ generated_keys.public }}</textarea>
+              <button type="submit">Скачать открытый ключ (PEM)</button>
+            </form>
+
             <h3>Закрытый ключ</h3>
             <textarea readonly rows="6">{{ generated_keys.private }}</textarea>
 
             <form method="post">
-              <input type="hidden" name="action" value="download_keypair">
-              <textarea name="keypair_json" class="hidden-field">{{ generated_keys.pair }}</textarea>
-              <button type="submit">Скачать файл с парой ключей</button>
+              <input type="hidden" name="action" value="download_private_key">
+              <textarea name="private_key_pem" class="hidden-field">{{ generated_keys.private }}</textarea>
+              <button type="submit">Скачать закрытый ключ (PEM)</button>
             </form>
+
+            <p><strong>Модуль n:</strong> {{ generated_keys.modulus }}</p>
           </div>
         {% endif %}
       </section>
@@ -66,8 +75,8 @@
           <label for="plaintext">Открытый текст</label>
           <textarea id="plaintext" name="plaintext" rows="5" required></textarea>
 
-          <label for="public_key_file">Файл открытого ключа (JSON)</label>
-          <input id="public_key_file" name="public_key_file" type="file" accept="application/json">
+          <label for="public_key_file">Файл открытого ключа (PEM)</label>
+          <input id="public_key_file" name="public_key_file" type="file" accept="application/x-pem-file">
 
           <label for="public_key_text">Либо вставьте открытый ключ вручную</label>
           <textarea id="public_key_text" name="public_key_text" rows="4"></textarea>
@@ -79,10 +88,19 @@
           <div class="results">
             <h3>Результаты шифрования</h3>
             <p><strong>Симметричный ключ (двоичный вид):</strong> {{ encryption_result.symmetric_key_binary }}</p>
-            <p><strong>Зашифрованный ключ RSA (десятичное представление):</strong> {{ encryption_result.encrypted_key }}</p>
+            <p><strong>Зашифрованный ключ RSA (base64):</strong> {{ encryption_result.encrypted_key }}</p>
             <p><strong>Блоки шифртекста:</strong></p>
             <textarea readonly rows="4">{{ encryption_result.cipher_blocks_text }}</textarea>
-            <p><strong>Число символов исходного текста:</strong> {{ encryption_result.original_length }}</p>
+            <p><strong>Размер исходного текста (байты):</strong> {{ encryption_result.original_byte_length }}</p>
+
+            <p><strong>Подготовка текста:</strong></p>
+            <textarea readonly class="log-output" rows="10">{{ encryption_result.preparation_log }}</textarea>
+
+            <p><strong>Ход шифрования:</strong></p>
+            <textarea readonly class="log-output" rows="16">{{ encryption_result.encryption_log }}</textarea>
+
+            <p><strong>Шаги RSA:</strong></p>
+            <textarea readonly class="log-output" rows="6">{{ encryption_result.rsa_log }}</textarea>
 
             <form method="post">
               <input type="hidden" name="action" value="download_package">
@@ -105,8 +123,8 @@
           <label for="package_file">Файл пакета (JSON)</label>
           <input id="package_file" name="package_file" type="file" required accept="application/json">
 
-          <label for="private_key_file">Файл закрытого ключа (JSON)</label>
-          <input id="private_key_file" name="private_key_file" type="file" required accept="application/json">
+          <label for="private_key_file">Файл закрытого ключа (PEM)</label>
+          <input id="private_key_file" name="private_key_file" type="file" required accept="application/x-pem-file">
 
           <button type="submit" class="full-width">Расшифровать</button>
         </form>
@@ -119,6 +137,15 @@
             <textarea readonly rows="4">{{ decryption_result.cipher_blocks }}</textarea>
             <p><strong>Исходный текст:</strong></p>
             <textarea readonly rows="6">{{ decryption_result.plaintext }}</textarea>
+
+            <p><strong>Ход расшифрования:</strong></p>
+            <textarea readonly class="log-output" rows="16">{{ decryption_result.decryption_log }}</textarea>
+
+            <p><strong>Восстановление текста:</strong></p>
+            <textarea readonly class="log-output" rows="8">{{ decryption_result.restoration_log }}</textarea>
+
+            <p><strong>Шаги RSA:</strong></p>
+            <textarea readonly class="log-output" rows="6">{{ decryption_result.rsa_log }}</textarea>
 
             <form method="post">
               <input type="hidden" name="action" value="download_plaintext">
