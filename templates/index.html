@@ -2,6 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Сеть Фейстеля — учебное веб-приложение</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
@@ -87,22 +88,70 @@
         {% if encryption_result %}
           <div class="results">
             <h3>Результаты шифрования</h3>
-            <p><strong>Симметричный ключ (двоичный вид):</strong> {{ encryption_result.symmetric_key_binary }}</p>
-            <p><strong>Зашифрованный ключ RSA (base64):</strong> {{ encryption_result.encrypted_key }}</p>
-            <p><strong>Блоки шифртекста:</strong></p>
-            <textarea readonly rows="4">{{ encryption_result.cipher_blocks_text }}</textarea>
-            <p><strong>Размер исходного текста (байты):</strong> {{ encryption_result.original_byte_length }}</p>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <span class="stat-label">Симметричный ключ (16 бит)</span>
+                <span class="stat-value mono">{{ encryption_result.symmetric_key_binary }}</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Зашифрованный ключ RSA (base64)</span>
+                <span class="stat-value mono">{{ encryption_result.encrypted_key }}</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Размер исходного текста</span>
+                <span class="stat-value">{{ encryption_result.original_byte_length }} байт</span>
+              </div>
+            </div>
 
-            <p><strong>Подготовка текста:</strong></p>
-            <textarea readonly class="log-output" rows="10">{{ encryption_result.preparation_log }}</textarea>
+            <div class="chip-panel">
+              <div class="panel-header">
+                <h4>Блоки шифртекста</h4>
+                <span class="panel-hint">Всего {{ encryption_result.cipher_blocks|length }}</span>
+              </div>
+              <div class="chip-list">
+                {% for block in encryption_result.cipher_blocks %}
+                  <span class="chip mono">{{ block }}</span>
+                {% endfor %}
+              </div>
+            </div>
 
-            <p><strong>Ход шифрования:</strong></p>
-            <textarea readonly class="log-output" rows="16">{{ encryption_result.encryption_log }}</textarea>
+            <div class="log-wrapper">
+              <div class="log-card">
+                <h4>Подготовка текста</h4>
+                <ol class="log-list">
+                  {% for line in encryption_result.preparation_steps %}
+                    <li><span class="mono">{{ line }}</span></li>
+                  {% endfor %}
+                </ol>
+              </div>
+              <div class="log-card">
+                <h4>Ход шифрования</h4>
+                {% for section in encryption_result.encryption_sections %}
+                  <details class="log-section" {% if loop.index == 1 %}open{% endif %}>
+                    <summary>{{ section.title }}</summary>
+                    {% if section.lines %}
+                      <ul class="log-lines">
+                        {% for line in section.lines %}
+                          <li class="log-line {% if 'РАУНД' in line %}log-line-round{% endif %}">
+                            <span class="mono">{{ line }}</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </details>
+                {% endfor %}
+              </div>
+              <div class="log-card">
+                <h4>Шаги RSA</h4>
+                <ul class="log-list">
+                  {% for line in encryption_result.rsa_steps %}
+                    <li><span class="mono">{{ line }}</span></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
 
-            <p><strong>Шаги RSA:</strong></p>
-            <textarea readonly class="log-output" rows="6">{{ encryption_result.rsa_log }}</textarea>
-
-            <form method="post">
+            <form method="post" class="action-row">
               <input type="hidden" name="action" value="download_package">
               <textarea name="package_json" class="hidden-field">{{ encryption_result.package_json }}</textarea>
               <button type="submit">Скачать пакет для передачи</button>
@@ -132,22 +181,73 @@
         {% if decryption_result %}
           <div class="results">
             <h3>Расшифрованные данные</h3>
-            <p><strong>Симметричный ключ:</strong> {{ decryption_result.symmetric_key_binary }}</p>
-            <p><strong>Блоки шифртекста:</strong></p>
-            <textarea readonly rows="4">{{ decryption_result.cipher_blocks }}</textarea>
-            <p><strong>Исходный текст:</strong></p>
-            <textarea readonly rows="6">{{ decryption_result.plaintext }}</textarea>
+            <div class="stat-grid">
+              <div class="stat-card">
+                <span class="stat-label">Симметричный ключ (16 бит)</span>
+                <span class="stat-value mono">{{ decryption_result.symmetric_key_binary }}</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-label">Количество блоков</span>
+                <span class="stat-value">{{ decryption_result.cipher_blocks_list|length }}</span>
+              </div>
+            </div>
 
-            <p><strong>Ход расшифрования:</strong></p>
-            <textarea readonly class="log-output" rows="16">{{ decryption_result.decryption_log }}</textarea>
+            <div class="chip-panel">
+              <div class="panel-header">
+                <h4>Полученные шифроблоки</h4>
+                <span class="panel-hint">XOR режим обратной связи</span>
+              </div>
+              <div class="chip-list">
+                {% for block in decryption_result.cipher_blocks_list %}
+                  <span class="chip mono">{{ block }}</span>
+                {% endfor %}
+              </div>
+            </div>
 
-            <p><strong>Восстановление текста:</strong></p>
-            <textarea readonly class="log-output" rows="8">{{ decryption_result.restoration_log }}</textarea>
+            <div class="text-panel">
+              <div class="panel-header">
+                <h4>Исходный текст</h4>
+              </div>
+              <div class="text-box">{{ decryption_result.plaintext }}</div>
+            </div>
 
-            <p><strong>Шаги RSA:</strong></p>
-            <textarea readonly class="log-output" rows="6">{{ decryption_result.rsa_log }}</textarea>
+            <div class="log-wrapper">
+              <div class="log-card">
+                <h4>Ход расшифрования</h4>
+                {% for section in decryption_result.decryption_sections %}
+                  <details class="log-section" {% if loop.index == 1 %}open{% endif %}>
+                    <summary>{{ section.title }}</summary>
+                    {% if section.lines %}
+                      <ul class="log-lines">
+                        {% for line in section.lines %}
+                          <li class="log-line {% if 'РАУНД' in line %}log-line-round{% endif %}">
+                            <span class="mono">{{ line }}</span>
+                          </li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </details>
+                {% endfor %}
+              </div>
+              <div class="log-card">
+                <h4>Восстановление текста</h4>
+                <ol class="log-list">
+                  {% for line in decryption_result.restoration_steps %}
+                    <li><span class="mono">{{ line }}</span></li>
+                  {% endfor %}
+                </ol>
+              </div>
+              <div class="log-card">
+                <h4>Шаги RSA</h4>
+                <ul class="log-list">
+                  {% for line in decryption_result.rsa_steps %}
+                    <li><span class="mono">{{ line }}</span></li>
+                  {% endfor %}
+                </ul>
+              </div>
+            </div>
 
-            <form method="post">
+            <form method="post" class="action-row">
               <input type="hidden" name="action" value="download_plaintext">
               <textarea name="plaintext_data" class="hidden-field">{{ decryption_result.plaintext }}</textarea>
               <button type="submit">Скачать расшифрованный текст</button>
