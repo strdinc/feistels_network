@@ -1,0 +1,141 @@
+body {
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f5f7fb;
+  color: #1f2430;
+}
+
+header,
+footer {
+  background-color: #222d3a;
+  color: #ffffff;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+main {
+  padding: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+section {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+h1,
+h2,
+h3 {
+  margin-top: 0;
+}
+
+p {
+  line-height: 1.6;
+}
+
+form {
+  margin-top: 1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+textarea,
+input[type="file"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #cbd2d9;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: #fdfdfd;
+}
+
+textarea[readonly] {
+  background-color: #f0f4fa;
+}
+
+button {
+  padding: 0.85rem 1.5rem;
+  background-color: #3066be;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+  background-color: #234a88;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.results {
+  margin-top: 1.5rem;
+  background-color: #f0f4fa;
+  border-radius: 10px;
+  padding: 1.25rem;
+  border: 1px solid #d0dae7;
+}
+
+.messages {
+  max-width: 960px;
+  margin: 1rem auto;
+  padding: 0 2rem;
+}
+
+.message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.message.success {
+  background-color: #e4f6e8;
+  color: #276738;
+  border: 1px solid #7cd992;
+}
+
+.message.error {
+  background-color: #fdecea;
+  color: #a0271f;
+  border: 1px solid #f5a8a1;
+}
+
+.hidden-field {
+  display: none;
+}
+
+footer p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+  main {
+    padding: 1rem;
+  }
+
+  section {
+    padding: 1rem;
+  }
+}
+
