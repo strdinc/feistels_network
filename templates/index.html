@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8">
+    <title>Сеть Фейстеля — учебное веб-приложение</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Сеть Фейстеля и гибридная криптосистема</h1>
+      <p>
+        Приложение демонстрирует работу сети Фейстеля с 8 раундами,
+        16-битным блоком и правосторонним XOR. Секретный ключ передаётся
+        через RSA, а текст шифруется в режиме обратной связи по шифртексту.
+      </p>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <section class="messages">
+          {% for category, message in messages %}
+            <div class="message {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </section>
+      {% endif %}
+    {% endwith %}
+
+    <main>
+      <section>
+        <h2>1. Генерация пары RSA-ключей</h2>
+        <p>
+          Нажмите кнопку ниже, чтобы получить новую пару ключей. Файл включает
+          открытый и закрытый ключи, поэтому храните его в безопасном месте.
+        </p>
+        <form method="post">
+          <input type="hidden" name="action" value="generate_keys">
+          <button type="submit">Сгенерировать ключи</button>
+        </form>
+
+        {% if generated_keys %}
+          <div class="results">
+            <h3>Открытый ключ</h3>
+            <textarea readonly rows="6">{{ generated_keys.public }}</textarea>
+
+            <h3>Закрытый ключ</h3>
+            <textarea readonly rows="6">{{ generated_keys.private }}</textarea>
+
+            <form method="post">
+              <input type="hidden" name="action" value="download_keypair">
+              <textarea name="keypair_json" class="hidden-field">{{ generated_keys.pair }}</textarea>
+              <button type="submit">Скачать файл с парой ключей</button>
+            </form>
+          </div>
+        {% endif %}
+      </section>
+
+      <section>
+        <h2>2. Шифрование сообщения</h2>
+        <p>
+          Введите текст и предоставьте открытый ключ получателя. Симметричный
+          16-битный ключ генерируется автоматически и шифруется RSA.
+        </p>
+        <form method="post" enctype="multipart/form-data" class="form-grid">
+          <input type="hidden" name="action" value="encrypt">
+
+          <label for="plaintext">Открытый текст</label>
+          <textarea id="plaintext" name="plaintext" rows="5" required></textarea>
+
+          <label for="public_key_file">Файл открытого ключа (JSON)</label>
+          <input id="public_key_file" name="public_key_file" type="file" accept="application/json">
+
+          <label for="public_key_text">Либо вставьте открытый ключ вручную</label>
+          <textarea id="public_key_text" name="public_key_text" rows="4"></textarea>
+
+          <button type="submit" class="full-width">Зашифровать</button>
+        </form>
+
+        {% if encryption_result %}
+          <div class="results">
+            <h3>Результаты шифрования</h3>
+            <p><strong>Симметричный ключ (двоичный вид):</strong> {{ encryption_result.symmetric_key_binary }}</p>
+            <p><strong>Зашифрованный ключ RSA (десятичное представление):</strong> {{ encryption_result.encrypted_key }}</p>
+            <p><strong>Блоки шифртекста:</strong></p>
+            <textarea readonly rows="4">{{ encryption_result.cipher_blocks_text }}</textarea>
+            <p><strong>Число символов исходного текста:</strong> {{ encryption_result.original_length }}</p>
+
+            <form method="post">
+              <input type="hidden" name="action" value="download_package">
+              <textarea name="package_json" class="hidden-field">{{ encryption_result.package_json }}</textarea>
+              <button type="submit">Скачать пакет для передачи</button>
+            </form>
+          </div>
+        {% endif %}
+      </section>
+
+      <section>
+        <h2>3. Расшифрование пакета</h2>
+        <p>
+          Получатель выбирает пакет и закрытый ключ, после чего система
+          восстанавливает исходный текст и симметричный ключ.
+        </p>
+        <form method="post" enctype="multipart/form-data" class="form-grid">
+          <input type="hidden" name="action" value="decrypt">
+
+          <label for="package_file">Файл пакета (JSON)</label>
+          <input id="package_file" name="package_file" type="file" required accept="application/json">
+
+          <label for="private_key_file">Файл закрытого ключа (JSON)</label>
+          <input id="private_key_file" name="private_key_file" type="file" required accept="application/json">
+
+          <button type="submit" class="full-width">Расшифровать</button>
+        </form>
+
+        {% if decryption_result %}
+          <div class="results">
+            <h3>Расшифрованные данные</h3>
+            <p><strong>Симметричный ключ:</strong> {{ decryption_result.symmetric_key_binary }}</p>
+            <p><strong>Блоки шифртекста:</strong></p>
+            <textarea readonly rows="4">{{ decryption_result.cipher_blocks }}</textarea>
+            <p><strong>Исходный текст:</strong></p>
+            <textarea readonly rows="6">{{ decryption_result.plaintext }}</textarea>
+
+            <form method="post">
+              <input type="hidden" name="action" value="download_plaintext">
+              <textarea name="plaintext_data" class="hidden-field">{{ decryption_result.plaintext }}</textarea>
+              <button type="submit">Скачать расшифрованный текст</button>
+            </form>
+          </div>
+        {% endif %}
+      </section>
+    </main>
+
+    <footer>
+      <p>
+        Реализация учебной сети Фейстеля с комментариями и подробным описанием.
+      </p>
+    </footer>
+  </body>
+</html>
