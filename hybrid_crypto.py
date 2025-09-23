@@ -9,6 +9,7 @@ the public exponent.
 
 from __future__ import annotations
 
+import json
 import math
 import secrets
 from dataclasses import dataclass
@@ -49,6 +50,55 @@ class RSAKeyPair:
 
     public: RSAPublicKey
     private: RSAPrivateKey
+
+
+def export_rsa_public_key(key: RSAPublicKey) -> str:
+    """Вернуть публичный ключ RSA в виде JSON-строки."""
+
+    # Используем строки для модуля, чтобы избежать переполнения при обмене.
+    payload = {"modulus": str(key.modulus), "exponent": str(key.exponent)}
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def export_rsa_private_key(key: RSAPrivateKey) -> str:
+    """Вернуть приватный ключ RSA в виде JSON-строки."""
+
+    payload = {"modulus": str(key.modulus), "exponent": str(key.exponent)}
+    return json.dumps(payload, ensure_ascii=False)
+
+
+def import_rsa_public_key(data: str) -> RSAPublicKey:
+    """Восстановить публичный ключ RSA из текстового представления."""
+
+    try:
+        payload = json.loads(data)
+    except json.JSONDecodeError as error:
+        raise ValueError("Не удалось прочитать публичный ключ.") from error
+
+    try:
+        modulus = int(payload["modulus"])
+        exponent = int(payload.get("exponent", PUBLIC_EXPONENT))
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Некорректный формат публичного ключа.") from error
+
+    return RSAPublicKey(modulus=modulus, exponent=exponent)
+
+
+def import_rsa_private_key(data: str) -> RSAPrivateKey:
+    """Восстановить приватный ключ RSA из текстового представления."""
+
+    try:
+        payload = json.loads(data)
+    except json.JSONDecodeError as error:
+        raise ValueError("Не удалось прочитать приватный ключ.") from error
+
+    try:
+        modulus = int(payload["modulus"])
+        exponent = int(payload["exponent"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("Некорректный формат приватного ключа.") from error
+
+    return RSAPrivateKey(modulus=modulus, exponent=exponent)
 
 
 def generate_rsa_keypair(prime_bits: int = RSA_DEFAULT_SIZE) -> RSAKeyPair:
