@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FEISTEL_REPORT.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="%D0%BE%D1%82%D1%87%D1%91%D1%82-%D0%BF%D0%BE-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8E-%D1%81%D0%B5%D1%82%D0%B8-%D1%84%D0%B5%D0%B9%D1%81%D1%82%D0%B5%D0%BB%D1%8F">Отчёт по модулю сети Фейстеля</h1>
+<h4 id="%D1%84%D0%B8%D0%BB%D0%B0%D1%82%D0%BE%D0%B2-%D1%81%D0%B5%D1%80%D0%B3%D0%B5%D0%B5%D0%B2%D0%B0-%D0%BA%D0%B1-221">Филатов, Сергеева, КБ-221</h4>
+<h2 id="%D0%BE%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5-%D0%B2%D1%81%D0%B5%D0%B9-%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D1%8B">Описание всей программы</h2>
+<p>Модуль <code>feistel.py</code> реализует сеть Фейстеля для шифрования и дешифрования
+строк в кодировке UTF-8. Процесс разбивается на подготовку исходного текста к
+работе с 16-битными блоками, проведение восьми раундов преобразований в каждом
+блоке с использованием циклических сдвигов ключа, а также обратное преобразование
+шифртекста в исходную строку. Дополнительно модуль ведёт подробные текстовые
+журналы на каждом этапе, чтобы демонстрировать внутренние состояния алгоритма:
+формирование блоков, последовательные раунды сети, применение XOR между блоками
+и восстановление открытого текста. Вспомогательные
+функции обеспечивают проверку корректности ключа, форматирование блоков, операции
+XOR и вращения, а структура <code>PreparedText</code> хранит результаты подготовки текста.</p>
+<p>В проекте также присутствует веб-интерфейс на Flask (файл <code>app.py</code>), позволяющий
+взаимодействовать с реализацией сети через браузер (постоянная ссылка http://45.156.20.75:2141).</p>
+<h2 id="%D0%BF%D0%BE%D0%B4%D1%80%D0%BE%D0%B1%D0%BD%D0%BE%D0%B5-%D0%BE%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5-%D1%84%D1%83%D0%BD%D0%BA%D1%86%D0%B8%D0%B9-%D0%BC%D0%BE%D0%B4%D1%83%D0%BB%D1%8F-feistelpy">Подробное описание функций модуля <code>feistel.py</code></h2>
+<h3 id="preparedtext-dataclass">PreparedText (dataclass)</h3>
+<pre class="hljs"><code><div>@dataclass
+class PreparedText:
+    &quot;&quot;&quot;Результат подготовки открытого текста.&quot;&quot;&quot;
+
+    binary_blocks: List[str]
+    original_byte_length: int
+</div></code></pre>
+<p><code>PreparedText</code> — простая структура данных, которая фиксирует результат
+предварительной обработки текста.</p>
+<p>Поле <code>binary_blocks</code> хранит 16-битные двоичные
+строки, готовые к подаче в раунды сети Фейстеля, а <code>original_byte_length</code> позволяет
+при восстановлении открытого текста отбросить добавленный выравнивающий байт.</p>
+<h3 id="bytestoblocks">_bytes_to_blocks</h3>
+<pre class="hljs"><code><div>def _bytes_to_blocks(data: bytes) -&gt; List[str]:
+
+    blocks: List[str] = []
+    for index in range(0, len(data), 2):
+        combined = (data[index] &lt;&lt; 8) | data[index + 1]
+        blocks.append(format(combined, &quot;016b&quot;))
+    return blocks
+</div></code></pre>
+<p>Функция принимает массив байтов и объединяет их попарно в 16-битные целые числа.
+Каждый шаг цикла берёт два последовательных байта, сдвигает старший на восемь бит
+влево и объединяет с младшим через операцию <code>XOR</code>. Полученное значение форматируется
+как двоичная строка фиксированной длины 16 символов и добавляется в список. Эта
+подготовка необходима для обработки текста блоками в сети Фейстеля.</p>
+<h3 id="blockstobytes">_blocks_to_bytes</h3>
+<pre class="hljs"><code><div>def _blocks_to_bytes(blocks: Sequence[str]) -&gt; bytearray:
+
+    result = bytearray()
+    for block in blocks:
+        value = int(block, 2)
+        result.append((value &gt;&gt; 8) &amp; 0xFF)
+        result.append(value &amp; 0xFF)
+    return result
+</div></code></pre>
+<p>Обратная функция для <code>_bytes_to_blocks</code>: она принимает двоичные строки,
+преобразует каждую в целое число, затем выделяет старший и младший байты с помощью
+сдвигов и маскирования, добавляя их в результирующий <code>bytearray</code>. Это позволяет
+получить последовательность байтов, эквивалентную исходной строке (с учётом
+возможного добавленного байта выравнивания).</p>
+<h3 id="prepareplaintextwithtrace">prepare_plaintext_with_trace</h3>
+<pre class="hljs"><code><div>def prepare_plaintext_with_trace(plaintext: str) -&gt; Tuple[PreparedText, str]:
+    &quot;&quot;&quot;Преобразует текст в блоки и возвращает журнал операций.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    lines.append(f&quot;Исходный текст: {plaintext!r}&quot;)
+
+    encoded = plaintext.encode(ENCODING)
+    grouped_bytes = &quot; &quot;.join(format(byte, &quot;08b&quot;) for byte in encoded) or &quot;—&quot;
+    lines.append(f&quot;Текст в UTF-8 (байты): {grouped_bytes}&quot;)
+    lines.append(f&quot;Длина: {len(encoded)} байт&quot;)
+
+    data = bytearray(encoded)
+    if len(data) % 2 != 0:
+        data.append(PADDING_BYTE)
+        lines.append(
+            &quot;Дополнено до чётного количества байт: добавлен байт &quot;
+            f&quot;0x{PADDING_BYTE:02X}&quot;
+        )
+    lines.append(f&quot;Длина после дополнения: {len(data)} байт&quot;)
+
+    blocks = _bytes_to_blocks(bytes(data))
+    lines.append(f&quot;Количество блоков: {len(blocks)}&quot;)
+    for index, block in enumerate(blocks, start=1):
+        byte_pair = data[(index - 1) * 2 : index * 2]
+        lines.append(
+            f&quot;Блок {index}: {block} (байты {format(byte_pair[0], '08b')} &quot;
+            f&quot;{format(byte_pair[1], '08b')})&quot;
+        )
+
+    prepared = PreparedText(binary_blocks=blocks, original_byte_length=len(encoded))
+    return prepared, &quot;\n&quot;.join(lines)
+</div></code></pre>
+<p>Функция готовит произвольную строку к шифрованию: кодирует текст в UTF-8, выводит
+байты в виде двоичных строк и при необходимости дополняет массив байтом нулей для
+получения чётного количества байтов. После этого она разбивает данные на 16-битные
+блоки, ведёт подробный лог с описанием каждого блока и возвращает структуру
+<code>PreparedText</code> вместе с текстовым журналом. Журнал удобен для визуального анализа
+предварительного этапа алгоритма.</p>
+<h3 id="prepareplaintext">prepare_plaintext</h3>
+<pre class="hljs"><code><div>def prepare_plaintext(plaintext: str) -&gt; PreparedText:
+    &quot;&quot;&quot;Совместимая обёртка без журнала.&quot;&quot;&quot;
+
+    prepared, _ = prepare_plaintext_with_trace(plaintext)
+    return prepared
+</div></code></pre>
+<p>Обёртка над <code>prepare_plaintext_with_trace</code>, скрывающая текстовый журнал. Она
+возвращает только структуру <code>PreparedText</code> и подходит для сценариев, где не нужен
+подробный вывод.</p>
+<h3 id="restoreplaintextwithtrace">restore_plaintext_with_trace</h3>
+<pre class="hljs"><code><div>def restore_plaintext_with_trace(blocks: Sequence[str], original_byte_length: int) -&gt; Tuple[str, str]:
+    &quot;&quot;&quot;Преобразует блоки обратно в текст и возвращает журнал операций.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    lines.append(f&quot;Количество блоков на входе: {len(blocks)}&quot;)
+
+    byte_array = _blocks_to_bytes(blocks)
+    grouped_bytes = &quot; &quot;.join(format(byte, &quot;08b&quot;) for byte in byte_array)
+    lines.append(f&quot;Блоки в байтах (до обрезки): {grouped_bytes}&quot;)
+    trimmed_bytes = bytes(byte_array[:original_byte_length])
+    lines.append(f&quot;Обрезано до {original_byte_length} байт исходного текста&quot;)
+    lines.append(
+        &quot;Байты после обрезки: &quot;
+        + (&quot; &quot;.join(format(byte, &quot;08b&quot;) for byte in trimmed_bytes) or &quot;—&quot;)
+    )
+
+    plaintext = trimmed_bytes.decode(ENCODING)
+    lines.append(f&quot;Восстановленный текст: {plaintext!r}&quot;)
+    return plaintext, &quot;\n&quot;.join(lines)
+</div></code></pre>
+<p>Функция объединяет двоичные блоки в последовательность байтов, отрезает добавленный
+ранее байт выравнивания, декодирует результат в UTF-8 и формирует подробный журнал
+восстановления. Лог фиксирует количество блоков, промежуточные байтовые
+представления и конечный текст.</p>
+<h3 id="restoreplaintext">restore_plaintext</h3>
+<pre class="hljs"><code><div>def restore_plaintext(blocks: Sequence[str], original_byte_length: int) -&gt; str:
+    &quot;&quot;&quot;Обратное преобразование без журнала.&quot;&quot;&quot;
+
+    plaintext, _ = restore_plaintext_with_trace(blocks, original_byte_length)
+    return plaintext
+</div></code></pre>
+<p>Обёртка без журнала для восстановления исходной строки. Используется, когда
+необходим только итоговый текст без сопроводительного вывода.</p>
+<h3 id="leftrotatebits">left_rotate_bits</h3>
+<pre class="hljs"><code><div>def left_rotate_bits(value: str, shift: int) -&gt; str:
+    &quot;&quot;&quot;Циклически сдвигает двоичную строку влево.&quot;&quot;&quot;
+
+    shift %= len(value)
+    return value[shift:] + value[:shift]
+</div></code></pre>
+<p>Реализует циклический сдвиг битовой строки влево. Нормализует величину сдвига по
+длине строки, после чего формирует результат с помощью конкатенации хвоста и
+головы строки. Используется для получения ключей раундов из базового 16-битного
+ключа.</p>
+<h3 id="roundfunction">round_function</h3>
+<pre class="hljs"><code><div>def round_function(right_half: str, round_key: str) -&gt; str:
+    &quot;&quot;&quot;Раундовая функция F: XOR + сложение по модулю 256.&quot;&quot;&quot;
+
+    left_key = round_key[:8]
+    right_key = round_key[8:]
+
+    right_value = int(right_half, 2)
+    left_key_value = int(left_key, 2)
+    right_key_value = int(right_key, 2)
+
+    mixed = right_value ^ left_key_value
+    transformed = (mixed + right_key_value) % 256
+    return format(transformed, &quot;08b&quot;)
+</div></code></pre>
+<p>Раундовая функция <code>F</code> принимает правую половину блока и 16-битный раундовый ключ.
+Ключ разбивается на две части: старшие 8 бит участвуют в XOR с правой половиной,
+а младшие 8 бит прибавляются по модулю 256 к результату XOR. Возвращается новая
+8-битная строка, используемая при вычислении следующего состояния блока.</p>
+<h3 id="feistelrounds">feistel_rounds</h3>
+<pre class="hljs"><code><div>def feistel_rounds(block: str, key: str) -&gt; str:
+    &quot;&quot;&quot;Шифрует один блок без трассировки.&quot;&quot;&quot;
+
+    encrypted, _ = feistel_rounds_with_trace(block, key)
+    return encrypted
+</div></code></pre>
+<p>Обёртка, выполняющая шифрование одного 16-битного блока без построения журнала.
+Возвращает только зашифрованную строку, используя реализацию с трассировкой под
+капотом.</p>
+<h3 id="feistelroundswithtrace">feistel_rounds_with_trace</h3>
+<pre class="hljs"><code><div>def feistel_rounds_with_trace(block: str, key: str) -&gt; Tuple[str, List[str]]:
+    &quot;&quot;&quot;Шифрует блок и возвращает журнал по раундам.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    left = block[:8]
+    right = block[8:]
+    lines.append(f&quot;Начальное состояние: L={left}, R={right}&quot;)
+
+    for round_number in range(1, 9):
+        round_key = left_rotate_bits(key, round_number)
+        f_output = round_function(right, round_key)
+        xor_result_value = int(left, 2) ^ int(f_output, 2)
+        xor_result = format(xor_result_value, &quot;08b&quot;)
+        lines.append(f&quot;--- РАУНД {round_number} ---&quot;)
+        lines.append(f&quot;Ключ раунда: {round_key}&quot;)
+        lines.append(f&quot;F(R, K) = F({right}, {round_key}) = {f_output}&quot;)
+        lines.append(f&quot;L ⊕ F(R,K) = {left} ⊕ {f_output} = {xor_result}&quot;)
+        new_left = right
+        new_right = xor_result
+        lines.append(f&quot;Новое состояние: L={new_left}, R={new_right}&quot;)
+        left, right = new_left, new_right
+
+    lines.append(f&quot;Финальное состояние: L={left}, R={right}&quot;)
+    result = left + right
+    lines.append(f&quot;Зашифрованный блок: {result}&quot;)
+    return result, lines
+</div></code></pre>
+<p>Основная реализация восьми раундов сети Фейстеля. На каждом шаге выполняется
+циклический сдвиг ключа, вычисление функции <code>F</code>, XOR с левой половиной и обмен
+половин. В журнал записываются все промежуточные состояния, что позволяет
+проанализировать поток данных раунда за раундом. После завершения раундов части
+склеиваются в финальный шифроблок.</p>
+<h3 id="feistelinverserounds">feistel_inverse_rounds</h3>
+<pre class="hljs"><code><div>def feistel_inverse_rounds(block: str, key: str) -&gt; str:
+    &quot;&quot;&quot;Расшифровывает блок без трассировки.&quot;&quot;&quot;
+
+    decrypted, _ = feistel_inverse_rounds_with_trace(block, key)
+    return decrypted
+</div></code></pre>
+<p>Обратная обёртка без журнала, выполняющая расшифрование одного блока. Как и в
+случае шифрования, использует версию с трассировкой, но скрывает подробный лог.</p>
+<h3 id="feistelinverseroundswithtrace">feistel_inverse_rounds_with_trace</h3>
+<pre class="hljs"><code><div>def feistel_inverse_rounds_with_trace(block: str, key: str) -&gt; Tuple[str, List[str]]:
+    &quot;&quot;&quot;Расшифровывает блок и возвращает журнал по раундам.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    left = block[:8]
+    right = block[8:]
+    lines.append(f&quot;Начальное состояние: L={left}, R={right}&quot;)
+
+    for round_number in range(8, 0, -1):
+        round_key = left_rotate_bits(key, round_number)
+        f_output = round_function(left, round_key)
+        xor_result_value = int(right, 2) ^ int(f_output, 2)
+        xor_result = format(xor_result_value, &quot;08b&quot;)
+        lines.append(f&quot;--- РАУНД {round_number} ---&quot;)
+        lines.append(f&quot;Ключ раунда: {round_key}&quot;)
+        lines.append(f&quot;F(L, K) = F({left}, {round_key}) = {f_output}&quot;)
+        lines.append(f&quot;R ⊕ F(L,K) = {right} ⊕ {f_output} = {xor_result}&quot;)
+        new_left = xor_result
+        new_right = left
+        lines.append(f&quot;Новое состояние: L={new_left}, R={new_right}&quot;)
+        left, right = new_left, new_right
+
+    lines.append(f&quot;Финальное состояние: L={left}, R={right}&quot;)
+    result = left + right
+    lines.append(f&quot;Расшифрованный блок: {result}&quot;)
+    return result, lines
+</div></code></pre>
+<p>Производит обратный проход по раундам сети, начиная с восьмого и заканчивая
+первым. На каждом шаге переиспользуется <code>round_function</code>, но применяется к левой
+половине, чтобы восстановить оригинальные значения. Журнал позволяет увидеть,
+как происходят обратные преобразования и обмен половин.</p>
+<h3 id="xorblocks">xor_blocks</h3>
+<pre class="hljs"><code><div>def xor_blocks(first: str, second: str) -&gt; str:
+    &quot;&quot;&quot;Выполняет XOR двух 16-битных строк.&quot;&quot;&quot;
+
+    value = int(first, 2) ^ int(second, 2)
+    return format(value, &quot;016b&quot;)
+</div></code></pre>
+<p>Функция побитово складывает по модулю два две 16-битные строки. Применяется как
+при шифровании (для реализации сцепления блоков), так и при расшифровании.</p>
+<h3 id="encryptblockswithtrace">encrypt_blocks_with_trace</h3>
+<pre class="hljs"><code><div>def encrypt_blocks_with_trace(blocks: Sequence[str], key: str) -&gt; Tuple[List[str], str]:
+    &quot;&quot;&quot;Шифрует блоки и возвращает подробный журнал процесса.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    lines.append(&quot;============================================================&quot;)
+    lines.append(&quot;ШИФРОВАНИЕ&quot;)
+    lines.append(&quot;============================================================&quot;)
+    lines.append(f&quot;Исходный ключ: {key}&quot;)
+
+    encrypted: List[str] = []
+    previous_cipher = &quot;0&quot; * 16
+
+    for index, block in enumerate(blocks, start=1):
+        lines.append(&quot;&quot;)
+        lines.append(f&quot;ШИФРОВАНИЕ БЛОКА {index}: {block}&quot;)
+        if index &gt; 1:
+            xored = xor_blocks(block, previous_cipher)
+            lines.append(
+                f&quot;XOR с предыдущим шифроблоком: {block} ⊕ {previous_cipher} = {xored}&quot;
+            )
+            block_to_encrypt = xored
+        else:
+            lines.append(&quot;Первый блок шифруется без предварительного XOR.&quot;)
+            block_to_encrypt = block
+
+        encrypted_block, trace = feistel_rounds_with_trace(block_to_encrypt, key)
+        lines.extend(trace)
+        encrypted.append(encrypted_block)
+        previous_cipher = encrypted_block
+
+    lines.append(&quot;&quot;)
+    lines.append(&quot;ВСЕ БЛОКИ ЗАШИФРОВАНЫ&quot;)
+    lines.append(
+        &quot;Полный зашифрованный текст: &quot; + &quot;&quot;.join(encrypted)
+    )
+    return encrypted, &quot;\n&quot;.join(lines)
+</div></code></pre>
+<p>Реализует шифрование последовательности блоков с формированием детального журнала.
+Для блоков, кроме первого, выполняется XOR с предыдущим шифроблоком (аналог режима
+CBC), что отражается в логе. Затем каждый блок проходит восемь раундов сети
+Фейстеля, а результаты и промежуточные состояния включаются в журнал. В конце
+возвращается список зашифрованных блоков и полный текст отчёта.</p>
+<h3 id="encryptblocks">encrypt_blocks</h3>
+<pre class="hljs"><code><div>def encrypt_blocks(blocks: Sequence[str], key: str) -&gt; List[str]:
+    &quot;&quot;&quot;Совместимая версия без журнала.&quot;&quot;&quot;
+
+    encrypted, _ = encrypt_blocks_with_trace(blocks, key)
+    return encrypted
+</div></code></pre>
+<p>Упрощённая версия пакетного шифрования, возвращающая только список шифроблоков
+без текстового описания процесса.</p>
+<h3 id="decryptblockswithtrace">decrypt_blocks_with_trace</h3>
+<pre class="hljs"><code><div>def decrypt_blocks_with_trace(blocks: Sequence[str], key: str) -&gt; Tuple[List[str], str]:
+    &quot;&quot;&quot;Расшифровывает блоки и возвращает подробный журнал процесса.&quot;&quot;&quot;
+
+    lines: List[str] = []
+    lines.append(&quot;============================================================&quot;)
+    lines.append(&quot;ДЕШИФРОВАНИЕ&quot;)
+    lines.append(&quot;============================================================&quot;)
+    lines.append(f&quot;Исходный ключ: {key}&quot;)
+
+    decrypted: List[str] = []
+    previous_cipher = &quot;0&quot; * 16
+
+    for index, block in enumerate(blocks, start=1):
+        lines.append(&quot;&quot;)
+        lines.append(f&quot;ДЕШИФРОВАНИЕ БЛОКА {index}: {block}&quot;)
+        decrypted_block, trace = feistel_inverse_rounds_with_trace(block, key)
+        lines.extend(trace)
+
+        if index &gt; 1:
+            xored = xor_blocks(decrypted_block, previous_cipher)
+            lines.append(
+                f&quot;Обратный XOR с предыдущим шифроблоком: {decrypted_block} ⊕ {previous_cipher} = {xored}&quot;
+            )
+            decrypted_block = xored
+        else:
+            lines.append(&quot;Первый блок не требует обратного XOR.&quot;)
+
+        decrypted.append(decrypted_block)
+        previous_cipher = block
+
+    lines.append(&quot;&quot;)
+    lines.append(&quot;ВСЕ БЛОКИ ДЕШИФРОВАНЫ&quot;)
+    lines.append(
+        &quot;Полный дешифрованный текст: &quot; + &quot;&quot;.join(decrypted)
+    )
+    return decrypted, &quot;\n&quot;.join(lines)
+</div></code></pre>
+<p>Пошагово расшифровывает каждый блок, используя обратные раунды сети Фейстеля и
+журналируя все промежуточные вычисления. После каждого блока, начиная со второго,
+выполняется XOR с предыдущим шифроблоком для отмены сцепления. Итоговый журнал
+подробно описывает весь процесс восстановления.</p>
+<h3 id="decryptblocks">decrypt_blocks</h3>
+<pre class="hljs"><code><div>def decrypt_blocks(blocks: Sequence[str], key: str) -&gt; List[str]:
+    &quot;&quot;&quot;Совместимая версия без журнала.&quot;&quot;&quot;
+
+    decrypted, _ = decrypt_blocks_with_trace(blocks, key)
+    return decrypted
+</div></code></pre>
+<p>Функция возвращает только последовательность расшифрованных 16-битных блоков,
+скрывая текстовый отчёт.</p>
+<h3 id="ensure16bitkey">ensure_16bit_key</h3>
+<pre class="hljs"><code><div>def ensure_16bit_key(key: str) -&gt; str:
+    &quot;&quot;&quot;Проверяет, что ключ состоит из 16 бит.&quot;&quot;&quot;
+
+    if not set(key) &lt;= {&quot;0&quot;, &quot;1&quot;}:
+        raise ValueError(&quot;Ключ должен состоять только из символов '0' и '1'.&quot;)
+    if len(key) != 16:
+        raise ValueError(&quot;Ключ сети Фейстеля обязан быть длиной ровно 16 бит.&quot;)
+    return key
+</div></code></pre>
+<p>Валидирует двоичный ключ: убеждается, что он содержит только символы <code>0</code> и <code>1</code>,
+и что его длина равна 16. При нарушении условий возбуждает <code>ValueError</code>. Возвращает
+исходную строку для удобства цепочек вызовов.</p>
+<h3 id="formatblocks">format_blocks</h3>
+<pre class="hljs"><code><div>def format_blocks(blocks: Sequence[str]) -&gt; str:
+    &quot;&quot;&quot;Возвращает текстовое представление блоков.&quot;&quot;&quot;
+
+    return &quot; &quot;.join(blocks)
+</div></code></pre>
+<p>Удобная функция для форматирования списка блоков в строку, где отдельные блоки
+разделены пробелами. Используется для вывода пользователю.</p>
+<h2 id="%D1%81%D0%BA%D1%80%D0%B8%D0%BD%D1%88%D0%BE%D1%82%D1%8B">Скриншоты</h2>
+<h3 id="%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D1%84%D0%B5%D0%B9%D1%81-%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B0%D1%86%D0%B8%D0%B8-rsa-%D0%BA%D0%BB%D1%8E%D1%87%D0%B5%D0%B9">Интерфейс генерации RSA ключей</h3>
+<p><img src="screen1.png" alt="alt text"></p>
+<h3 id="%D1%81%D0%B3%D0%B5%D0%BD%D0%B5%D1%80%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B5-rsa-%D0%BA%D0%BB%D1%8E%D1%87%D0%B8">Сгенерированные RSA ключи</h3>
+<p><img src="screen2.png" alt="alt text"></p>
+<h3 id="%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D1%84%D0%B5%D0%B9%D1%81-%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D1%8F">Интерфейс шифрования сообщения</h3>
+<p><img src="screen3.png" alt="img.png"></p>
+<h3 id="%D0%BF%D1%80%D0%B8%D0%BC%D0%B5%D1%80-%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D1%81%D0%BE%D0%BE%D0%B1%D1%89%D0%B5%D0%BD%D0%B8%D1%8F">Пример шифрования сообщения</h3>
+<p><img src="screen4.png" alt="img.png"></p>
+<h3 id="%D1%80%D0%B5%D0%B7%D1%83%D0%BB%D1%8C%D1%82%D0%B0%D1%82%D1%8B-%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F">Результаты шифрования</h3>
+<p><img src="screen5.png" alt="img.png"></p>
+<p><img src="screen6.png" alt="img.png"></p>
+<p><img src="screen7.png" alt="img.png"></p>
+<h3 id="%D0%B7%D0%B0%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%BD%D1%8B%D0%B9-%D0%BF%D0%B0%D0%BA%D0%B5%D1%82-%D0%B2-%D1%84%D0%BE%D1%80%D0%BC%D0%B0%D1%82%D0%B5-json">Зашифрованный пакет в формате json</h3>
+<p><img src="img_1.png" alt="img.png"></p>
+<h3 id="%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D1%84%D0%B5%D0%B9%D1%81-%D1%80%D0%B0%D1%81%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F-%D0%BF%D0%B0%D0%BA%D0%B5%D1%82%D0%B0">Интерфейс расшифрования пакета</h3>
+<p><img src="img_2.png" alt="img_2.png"></p>
+<h3 id="%D1%80%D0%B0%D1%81%D1%88%D0%B8%D1%84%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5-%D0%BF%D0%B0%D0%BA%D0%B5%D1%82%D0%B0">Расшифрование пакета</h3>
+<p><img src="img_3.png" alt="img_3.png"></p>
+<p><img src="img_4.png" alt="img_4.png"></p>
+<p><img src="img_5.png" alt="img_5.png"></p>
+<p><img src="img_6.png" alt="img_6.png"></p>
+
+</body>
+</html>
