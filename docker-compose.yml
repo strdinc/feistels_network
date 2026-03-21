@@ -1,9 +1,22 @@
-version: "3.9"
-
 services:
-  web:
-    build: .
-    container_name: feistels-network-app
-    ports:
-      - "2141:5000"
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: feistel-backend
     restart: unless-stopped
+    networks:
+      - default
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.feistel.rule=Host(`feistel.strdinc.space`)
+      - traefik.http.routers.feistel.entrypoints=websecure
+      - traefik.http.routers.feistel.tls=true
+      - traefik.http.routers.feistel.tls.certresolver=myresolver
+      - traefik.http.services.feistel.loadbalancer.server.port=5000
+
+networks:
+  proxy:
+    external: true
